@@ -146,4 +146,23 @@ body {
 .detail_value {
   font-weight: 500;
   color: #ff6f00;
+  overflow-wrap: anywhere;
+}
+
+/* Certificate names are latin, keep the label on one line next to them */
+.detail_value[dir="ltr"] {
+  text-align: left;
+  margin-right: 8px;
+}
+
+.security_detail .detail_label {
+  flex-shrink: 0;
+}
+
+.security_detail_text {
+  margin: 4px 0;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: #424242;
+  text-align: right;
 }

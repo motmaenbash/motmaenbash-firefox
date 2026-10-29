@@ -11,15 +11,18 @@ function createSecurityOverlay(message) {
     overlayDiv.className = message.className;
   }
 
-  let imgSrc = browser.runtime.getURL('assets/images/sign.png');
+  // Only verified or dangerous gateways get a sign
+  let imgSrc;
   if (message.icon && message.icon.includes('icon_danger.png')) {
     imgSrc = browser.runtime.getURL('assets/images/icon_danger.png');
   } else if (message.icon && message.icon.includes('icon_ok.png')) {
     imgSrc = browser.runtime.getURL('assets/images/sign.png');
+  } else {
+    return;
   }
 
   overlayDiv.innerHTML = `<a href="https://motmaenbash.milad.nu" target="_blank">
-    <img title="${message.description || 'مطمئن باش'}" 
+    <img title="${message.description || message.title || 'مطمئن باش'}"
     id="motmaenBashCornerSignLogo" 
     src="${imgSrc}"/>
   </a>`;
@@ -32,14 +35,10 @@ function createSecurityOverlay(message) {
   const url = new URL(location.href);
   if (url.hostname.match(/\.shaparak\.ir$/i)) {
     try {
+      // The gateway is only marked as verified once its certificate has been checked
       const response = await browser.runtime.sendMessage({ action: 'checkSecurity', url: location.href });
       if (response && response.message) {
         createSecurityOverlay(response.message);
-      } else if (url.protocol === 'https:') {
-        createSecurityOverlay({
-          description: 'این درگاه پرداخت معتبر و امن است',
-          icon: 'assets/images/icon_ok.png'
-        });
       }
     } catch (error) {
       console.error('Error sending checkSecurity message:', error);

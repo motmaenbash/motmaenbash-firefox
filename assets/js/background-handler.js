@@ -4,15 +4,17 @@
 class BackgroundHandler {
   constructor() {
     this.dataManager = new DataManager();
+    this.certificateGuard = new CertificateGuard();
     this.initialized = false;
+
+    // Registered right away so the background page can answer after it wakes up
+    this.setupMessageListeners();
   }
 
   // Initialize the handler
   async init() {
     await this.dataManager.init();
     this.initialized = true;
-
-    this.setupMessageListeners();
   }
 
   // Set up message listeners for communication with content scripts and popup
@@ -20,7 +22,8 @@ class BackgroundHandler {
     browser.runtime.onMessage.addListener(async (message, sender) => {
       try {
         if (message.action === 'checkSecurity' && message.url) {
-          return await this.handleSecurityCheck(message.url);
+          const tabId = typeof message.tabId === 'number' ? message.tabId : sender.tab && sender.tab.id;
+          return await this.handleSecurityCheck(message.url, tabId);
         }
 
         if (message.action === 'updateDatabase') {
@@ -34,7 +37,7 @@ class BackgroundHandler {
   }
 
   // Handle security check request
-  async handleSecurityCheck(url) {
+  async handleSecurityCheck(url, tabId) {
     try {
       if (!this.initialized) await this.dataManager.init();
 
@@ -56,7 +59,11 @@ class BackgroundHandler {
         };
       }
 
-      const securityResult = await this.dataManager.checkUrlSecurity(url);
+      const securityResult = applyCertificateVerdict(
+        await this.dataManager.checkUrlSecurity(url),
+        url,
+        this.certificateGuard.getVerdict(tabId, url)
+      );
       const message = this.getSecurityMessage(securityResult);
 
       return {

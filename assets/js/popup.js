@@ -17,16 +17,29 @@ async function updatePopupContent() {
 
     if (tabs && tabs[0] && tabs[0].url) {
       const currentTabUrl = tabs[0].url;
+      let result = data;
 
-      if (data.currentUrl && data.message && data.currentUrl === currentTabUrl) {
-        statusIcon.src = data.message.icon;
-        statusTitle.className = data.message.className || 'status_title_nok';
-        statusTitle.innerHTML = data.message.title;
+      // The stored result belongs to another page, so ask the background script
+      if (!(data.currentUrl && data.message && data.currentUrl === currentTabUrl)) {
+        result = await browser.runtime.sendMessage({
+          action: 'checkSecurity',
+          url: currentTabUrl,
+          tabId: tabs[0].id
+        });
+      }
 
-        if (data.securityResult && data.securityResult.secure === false) {
-          const typeName = getTypeName(data.securityResult.type);
-          const levelName = getLevelName(data.securityResult.level);
-          const matchType = data.securityResult.match === 1 ? 'دامنه' : 'آدرس کامل';
+      if (result && result.message) {
+        statusIcon.src = result.message.icon;
+        statusTitle.className = result.message.className || 'status_title_nok';
+        statusTitle.innerHTML = result.message.title;
+
+        if (result.securityResult && result.securityResult.certificate) {
+          showCertificateDetails(detailsContainer, result.securityResult.certificate, result.message);
+          statusTitle.parentNode.insertBefore(detailsContainer, statusTitle.nextSibling);
+        } else if (result.securityResult && result.securityResult.secure === false) {
+          const typeName = getTypeName(result.securityResult.type);
+          const levelName = getLevelName(result.securityResult.level);
+          const matchType = result.securityResult.match === 1 ? 'دامنه' : 'آدرس کامل';
 
           detailsContainer.innerHTML = `
             <div class="security_detail">
@@ -45,23 +58,44 @@ async function updatePopupContent() {
 
           statusTitle.parentNode.insertBefore(detailsContainer, statusTitle.nextSibling);
         }
-      } else {
-        const url = new URL(currentTabUrl);
-
-        if (url.hostname.match(/\.shaparak\.ir$/i) && url.protocol === 'https:') {
-          statusTitle.className = 'status_title_ok';
-          statusTitle.innerHTML = 'درگاه پرداخت امن، مطمئن باش';
-          statusIcon.src = 'assets/images/icon_ok.png';
-        } else {
-          statusTitle.className = 'status_title_nok';
-          statusTitle.innerHTML = 'این صفحه یک درگاه پرداخت نیست.';
-          statusIcon.src = 'assets/images/icon_128.png';
-        }
       }
     }
   } catch (error) {
     console.error('Error updating popup content:', error);
   }
+}
+
+// Show why the certificate of a payment gateway page couldn't be trusted.
+// Certificate names come from the server, so they are only ever set as text.
+function showCertificateDetails(container, certificate, message) {
+  const addText = (text) => {
+    const line = document.createElement('div');
+    line.className = 'security_detail_text';
+    line.textContent = text;
+    container.appendChild(line);
+  };
+
+  const addDetail = (label, value) => {
+    const row = document.createElement('div');
+    row.className = 'security_detail';
+
+    const labelElement = document.createElement('span');
+    labelElement.className = 'detail_label';
+    labelElement.textContent = label;
+
+    const valueElement = document.createElement('span');
+    valueElement.className = 'detail_value';
+    valueElement.dir = 'ltr';
+    valueElement.textContent = value;
+
+    row.append(labelElement, valueElement);
+    container.appendChild(row);
+  };
+
+  if (message.text) addText(message.text);
+  if (certificate.issuer) addDetail('صادرکننده گواهی:', certificate.issuer);
+  if (certificate.root) addDetail('گواهی ریشه:', certificate.root);
+  if (message.hint) addText(message.hint);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

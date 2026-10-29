@@ -2,6 +2,17 @@
 
 const handler = new BackgroundHandler();
 
+// Check the certificate chain of every shaparak.ir page
+browser.webRequest.onHeadersReceived.addListener(
+  (details) => handler.certificateGuard.onHeadersReceived(details),
+  { urls: ['https://*.shaparak.ir/*'], types: ['main_frame'] },
+  ['blocking']
+);
+
+browser.tabs.onRemoved.addListener((tabId) => {
+  handler.certificateGuard.forgetTab(tabId);
+});
+
 // Setup alarm for daily database updates
 function setupUpdateAlarm() {
   browser.alarms.create('updateDatabase', {
@@ -48,7 +59,7 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
     await handler.dataManager.checkForUpdate();
 
-    const { securityResult, message } = await handler.handleSecurityCheck(tab.url);
+    const { securityResult, message } = await handler.handleSecurityCheck(tab.url, tabId);
 
     const iconPath = message?.icon || 'assets/images/icon_neutral.png';
     const title = message?.title || 'Motmaen Bash';

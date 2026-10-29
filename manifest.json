@@ -10,6 +10,7 @@
       "assets/js/utils.js",
       "assets/js/database.js",
       "assets/js/data-manager.js",
+      "assets/js/certificate-guard.js",
       "assets/js/background-handler.js",
       "assets/js/background.js"
     ],
@@ -46,7 +47,10 @@
     "tabs",
     "storage",
     "alarms",
-    "https://raw.githubusercontent.com/"
+    "webRequest",
+    "webRequestBlocking",
+    "https://raw.githubusercontent.com/",
+    "https://*.shaparak.ir/*"
   ],
   "web_accessible_resources": [
     "assets/images/sign.png",
