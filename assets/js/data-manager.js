@@ -48,7 +48,10 @@ DataManager.prototype.processData = async function (data) {
     throw new Error('Invalid data format: Expected an array');
   }
 
-  for (const group of data) {
+  // The data is an array of arrays of groups; a flat array of groups is accepted too
+  const groups = data.flatMap((item) => (Array.isArray(item) ? item : [item]));
+
+  for (const group of groups) {
     // Validate group structure
     if (!group || typeof group !== 'object') {
       continue;
